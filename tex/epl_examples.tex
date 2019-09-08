@@ -23,6 +23,7 @@
 \usepackage{url}            % simple URL typesetting
 \usepackage{booktabs}       % professional-quality tables
 \usepackage{amsfonts}       % blackboard math symbols
+\usepackage{amssymb}        % lessapprox
 \usepackage{nicefrac}       % compact symbols for 1/2, etc.
 \usepackage{microtype}      % microtypography
 
@@ -45,11 +46,6 @@
   Seattle, WA, USA \\
   \texttt{abie@uw.edu} \\
   % examples of more authors
-  \And
-  Sam Petti? \\
-  % Affiliation \\
-  % Address \\
-  % \texttt{email} \\
   % \AND
   % Coauthor \\
   % Affiliation \\
@@ -75,26 +71,116 @@
   The 2020 US Census will use $\epsilon$-Differential Privacy, and use the TopDown mechanism to guarantee privacy loss of at most $\epsilon$.  However, it is possible that there is some slack in the bounds, and in practice, the privacy loss will be substantially less than $\epsilon$.  We developed an empirical measure of privacy loss, and applied it to a range of examples inspired by some aspects of the TopDown mechanism, to better understand how the empirical privacy loss of census-style count queries might compare to the theoretical guarantee.
 \end{abstract}
 
+Style guide:
+
+mechanism or algorithm
+
+areal unit or spatial unit, hierarchy
+
+I think number of levels in hierarchy should be $J$ and not $K$, because it is also the number of columns in the database.  Then $k$ can be the residual, instead of $i$.  Change things carefully!
+
+$I$ is probably not a good name for the number of areal units that are child.  How about $C$ for number of children?
+
+
 \section{Introduction}
 
-The 2020 US census will use $\epsilon$-Differential Privacy.
+The 2020 US Census will use a new approach to “disclosure avoidance” to protect respondents’ data.[ref] This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.
 
-The TopDown algorithm applies the geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, using optimization to combine the noisy measurements and ensure consistency.
-
-The additive property of DP ensures that the total privacy loss of TopDown is at most $\epsilon$, but it is possible that this inequality is not tight.
+The Census Bureau has developed their algorithm, TopDown, to be $\epsilon$-DP with low error, by applying a geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, and using constrained optimization to combine the noisy measurements and ensure consistency at each level.[ref]  Although the additive property [confirm this is correct name] of DP ensures that the total privacy loss of TopDown is at most $\epsilon$,[ref] it is possible that this inequality is not tight.\cite{hasselmo}
 
 We investigated the privacy loss of an idealized top-down mechanism, using a nonparametric approach to estimating the empirical privacy loss.
 
 \section{Methods}
 \label{methods}
 
-DP definition, and specialization to count queries, and to really simple count queries.
+An algorithm $\mathcal{A}$ is $\epsilon$-DP if ... [definition], and specialization to count queries, and to really simple count queries.
 
 Optimization applied to results of multiple count queries is at the root of the question here.
 
 \subsection{Simulation strategy for generating DP count data}
+I generated a synthetic population of $N$ individuals, each with a location specified by $K$ hierarchically nested levels, designed to have an average of $\mu$ individuals per location.
+I represented this database as matrix $D$ with $N$ rows and $K$ columns, where row $D_i$ represented the hierarchically nested location of individual $i$.
+To assign the location, for each individual $i$, for each level of the spatial hierarchy $k$, I sampled the location uniformly,  $D_{ik} \sim_{\mathcal{U}} \{0, 1, \ldots, I-1\}$ where $I = \left\lfloor \left(N/\mu\right)^{1/K} \right\rfloor$.
 
-\subsection{Estimation of empirical privacy loss}
+To find the exact total count (TC) for each location at any level of the spatial hierarchy, I grouped the database $D$ by the location tuple and counted how many individuals were in each group:
+$$
+\mathrm{TC}_{k_1, k_2, \ldots, k_{K'}} = \sum_i \mathbf{1}\left[
+D_{i,1} = k_1 \wedge 
+D_{i,2} = k_2 \wedge 
+\ldots
+D_{i,K'} = k_{K'}
+\right].
+$$
+
+\emph{Geometric Mechanism:} To generate $\epsilon$-DP counts from exact counts, I used the geometric mechanism to add noise to the exact counts for the most fine-grained areas in the spatial hierarchy (abbreviated GDPC for geometric DP count):
+$$
+\mathrm{GDPC}_{k_1, k_2, \ldots, k_{K}} = \mathrm{TC}_{k_1, k_2, \ldots, k_{K}} + X_{k_1, k_2, \ldots, k_{K}},
+$$
+where $X_{k_1, k_2, \ldots, k_{K}} \sim G(\epsilon)$ is drawn from a two-tailed geometric distribution with parameter $\epsilon$, defined by the following equation
+$$\Pr[G(z)=k] = \frac{(1 - \exp(-z))\exp(-z|k|)}{1 + \exp(-z)}.$$
+The output of this algorithm is the list of $
+\mathrm{GDPC}_{k_1, k_2, \ldots, k_{K}}$ values for all tuples $(k_1, k_2, \ldots, k_{K})$.
+
+\emph{Raked Mechanism:} To capture a key element of the TopDown approach developed for the 2020 US Census, I also generated $\epsilon$-DP counts from exact counts hierarchically, by ``raking'' the noisy counts at each level to sum to the noisy count from the level above.
+
+To be precise, for level $K'$ of the spatial hierarchy, I first calculated noisy counts analogous to $\mathrm{GDPC}$ from the Geometric Mechanism, but using only a $1/(K+1)$ portion of the total privacy budget $\epsilon$:
+$$
+\mathrm{NoisyC}_{k_1, k_2, \ldots, k_{K'}} = \mathrm{TC}_{k_1, k_2, \ldots, k_{K'}} + X_{k_1, k_2, \ldots, k_{K'}},
+$$
+where $X_{k_1, k_2, \ldots, k_{K'}} \sim G(\epsilon/(K+1))$.
+I then obtained the raked DP counts (RDPC) by scaling the noisy counts within each spatial area at level $K'-1$ of the spatial hierarchy, so that the sum of raked counts was equal to the raked DP count for the parent area in the spatial hierarchy:
+$$
+\mathrm{RDPC}_{k_1, k_2, \ldots, k_{K'}} = 
+\mathrm{NoisyC}_{k_1, k_2, \ldots, k_{K'}}\cdot
+\left(\frac
+{\mathrm{RDPC}_{k_1,k_2,\ldots, k_{K'-1}}}
+{\sum_\kappa \mathrm{NoisyC}_{k_1, k_2, \ldots, k_{K'-1}, \kappa}}
+\right)
+$$
+
+To start this process, I defined the RDPC for $K' = 0$ as
+$\mathrm{RDPC}_{\{\}} = N + X_{\{\}}$, where $X_{\{\}} \sim G(\epsilon/(K+1))$.
+
+The output of this algorithm is the list of $
+\mathrm{RDPC}_{k_1, k_2, \ldots, k_{K'}}$ values for all tuples $(k_1, k_2, \ldots, k_{K'})$ for all $K' \leq K$.
+
+\subsection{Empirical estimation of privacy loss}
+Differentially private algorithms are often engineered to achieve a guaranteed maximum level of privacy loss.  However, in complex algorithms like TopDown or the raked mechanism defined above, this bound on the privacy loss might have room for improvement.  I tested two approaches to empirically measuring privacy loss, to see how the theoretical bound of $\epsilon$ from the geometric raked mechanisms compare to the privacy loss demonstrable in practice.
+
+The most direct way to empirically investigate the privacy loss of an algorithm $\mathcal{A}$ like those from the previous section is to search for databases $D$ and $D'$ that differ on a single row and an event $E$ that can serve as a witness to the gap between $\Pr[\mathcal{A}(D) \in E]$ and $\Pr[\mathcal{A}(D') \in E]$.  Estimating the ratio of these probabilities is straightforward, but computationally intensive, and searching the space of near-databases and events is also difficult to do in general.  This approach has been developed in prior work by \citet{TK}.  In the case of count queries with the $D$ defined in the previous section, the search simplifies substantially.  The symmetric nature of the database means we can focus on changing the first row, without loss of generality, and the discrete nature of the output means we can restrict our attention entirely to events $E$ of the form $\left\{\mathcal{A}(D)_{k_1, k_2, \ldots, k_{K'}}
+- \mathrm{TC}_{k_1, k_2, \ldots, k_{K'}}
+\geq i\right\}$.
+
+\emph{Simple estimate:} I ran GDPC and RDPC 1,000 times with a single synthetic database $D$, generated as described above, and 1,000 more times with a perturbed database $D'$, created by incrementing all of the area indices of row 1 (mod $I$). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for the areal unit identified by $D_0$ being at least $i$ for a range of values of $i$ close to the exact total count for this area.  For any $i$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios is my ``simple'' empirical estimate of the privacy loss.
+
+\emph{Sneaky estimate:} Because of the special structure of count queries, there is a way to avoid re-running the DP algorithm repeatedly.  This can be particularly useful for assessing the empirical privacy loss of complex mechanisms like TopDown. If the difference between the DP count and the exact count was identically distributed for all areal units, then instead of focusing on only the areal unit containing $D_0$, we could use the residuals for all areal units to estimate the probability of the event we are after:
+$$\Pr\left[\mathrm{error}_{k_1, k_2, \ldots, k_{K}}^D
+\geq i\right]
+\approx
+\bigg(\sum_{k_1'=1}^I\sum_{k_2'=1}^I\cdots\sum_{k_K' = 1}^I \mathbf{1}[\left\{\mathrm{error}_{k_1', k_2', \ldots, k_{K}'}^D
+\geq i\right\}]\bigg)\bigg/I^K.
+$$
+I wrote $\mathrm{error}_{k_1, k_2, \ldots, k_{K}}^D$ as shorthand for the residual $\left(\mathcal{A}(D)_{k_1, k_2, \ldots, k_{K'}}
+- \mathrm{TC}_{k_1, k_2, \ldots, k_{K'}}\right)$, where $\mathcal{A}(D)$ is the vector of DP counts returned by the GDPC or RDPC algorithm.
+
+We can make this estimate with more precision than the simple estimate, using substantially less computation.
+
+It is also possible to make an estimate of the probability $D'$ yields error which exceeds $i$ without repeatedly running the DP algorithm.  This relies on the observation that, for count queries, a change to a single row of data can change the exact count by at most one for an areal unit.  Therefore
+$$
+\Pr\left[\mathrm{error}_{k_1, k_2, \ldots, k_{K}}^{D'}
+\geq i\right]
+\leq
+\Pr\left[\mathrm{error}_{k_1, k_2, \ldots, k_{K}}^{D}
+\geq i-1\right],
+$$
+which we can also approximate by examining the residuals for all areal units:
+$$\Pr\left[\mathrm{error}_{k_1, k_2, \ldots, k_{K}}^{D'}
+\geq i\right]
+\lessapprox 
+\bigg(\sum_{k_1'=1}^I\sum_{k_2'=1}^I\cdots\sum_{k_K' = 1}^I \mathbf{1}[\left\{\mathrm{error}_{k_1', k_2', \ldots, k_{K}'}^D
+\geq i-1\right\}]\bigg)\bigg/I^J.
+$$
+With these approximations in hand, I ran GDPC and RDPC for a range of databases $D$, with multiple values of $N$, $J$, and $\mu$, and calculated $\log \hat{p}_k / \hat{p}_{k-1}$ for all $|k| \leq K$.  I also searched for the appropriate value of $K$ to bound the range of residuals, which I parameterized by selecting a residual percentile and scaling factor (e.g. take $K$ to be $1.5$ times the $95$-th percentile of the residuals.
 
 \section{Results}
 \label{results}
@@ -109,6 +195,11 @@ Use natbib command \citet{hasselmo} to get citations, such as  Hasselmo, et al.\
 \end{figure}
 
 \section{Discussion}
+
+\subsection{Limitations}
+Could have missed something.
+
+\section{Conclusion}
 
 
 \section*{References}
