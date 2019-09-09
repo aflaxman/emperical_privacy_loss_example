@@ -175,7 +175,7 @@ The most direct way to empirically investigate the privacy loss of an algorithm 
 = k\right\}$ or $\left\{\mathrm{error}_{j_1, j_2, \ldots, j_{J}} \geq k\right\}$ where $\mathrm{error}_{j_1, j_2, \ldots, j_{J}} = \mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
 - \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}$.
 
-\emph{Direct estimate:} I ran GDPC, RDPC, and ADPC 100 times with a single synthetic database $D$, generated as described above, and 100 more times with a perturbed database $D'$, created by changing the areal unit of a single individual (moving someone from area $0$ to area $1001$ to be precise). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for areal unit $0$ being $k$ away from the exact total count for this area.  For any $k$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios could be used as an empirical estimate of the privacy loss.
+\emph{Direct estimate:} I ran GDPC, RDPC, and ADPC 500 times with a single synthetic database $D$, generated as described above, and 500 more times with a perturbed database $D'$, created by changing the areal unit of a single individual (moving someone from area $0$ to area $1001$ to be precise). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for areal unit $0$ being $k$ away from the exact total count for this area.  For any $k$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios could be used as an empirical estimate of the privacy loss.
 
 % With only 100 replicates of the results of the original and perturbed counts, however, these directly estimated log-ratios are too noisy to provide an interpretable bound.  To address this, I used Gaussian kernel density estimation, to estimate the probability of a residual of $k$ for the original and perturbed databases, $\tilde{p}_D(k)$ and $\tilde{p}_{D'}(k)$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log\left( \tilde{p}_D(k) / \tilde{p}_{D'}(k)\right)$ as a less-noisy direct estimate of the empirical privacy loss.
 
@@ -218,7 +218,7 @@ As with the direct estimates, I found that the stochastic noise in $\hat{p}_k$ l
 \section{Results}
 \label{results}
 
-My direct estimate of privacy loss took 20 minutes of compute time to produce 100 samples, but was too noisy to be interpretable.
+My direct estimate of privacy loss took 2 hours of compute time to produce 500 samples, but was too noisy to be interpretable.
 %KDE smoothing was also unsuccessful in reducing the noise (in the time available in my rush to the submission deadline).
 By uses a comparison of $\left\{\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
 - \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}
