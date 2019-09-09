@@ -78,11 +78,11 @@
 
 \section{Introduction}
 
-The 2020 US Census will use a new approach to disclosure avoidance to protect respondents’ data.[ref] This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.
+The 2020 US Census will use a new approach to disclosure avoidance to protect respondents’ data.\cite{abowd2018disclosure} This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.\cite{dwork2014algorithmic}
 
-The Census Bureau has developed their algorithm, TopDown, to be $\epsilon$-DP with low error, by applying a geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, and using constrained optimization to combine the noisy measurements and ensure consistency at each level.[ref]  Although the additive property [confirm this is correct name] of DP ensures that the total privacy loss of TopDown is at most $\epsilon$,[ref] it is possible that this inequality is not tight.\cite{hasselmo}
+The Census Bureau has developed their algorithm, TopDown, to be $\epsilon$-DP with low error, by applying a geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, and using constrained optimization to combine the noisy measurements and ensure consistency at each level.\cite{abowd2019census}  Although the sequential composition theorem of DP ensures that the total privacy loss of TopDown is at most $\epsilon$, it is possible that this inequality is not tight.
 
-We investigated the privacy loss of an idealized top-down mechanism, using a nonparametric approach to estimating the empirical privacy loss.
+To better understand how much privacy will be delivered by TopDown, I investigated the privacy loss of an idealized top-down algorithm and compared it to other simple counting algorithms.  My estimates of empirical privacy loss relied on a nonparametric method from machine learning (kernel density estimation), and offer directions for future application of sophisticated machine learning tools.
 
 \section{Methods}
 \label{methods}
@@ -95,14 +95,27 @@ $$
 \leq \exp\left(\epsilon\right)
 \Pr\left[\mathcal{A}(D') = \mathcal{P}\right].
 $$
-[specialization to count queries, and to really simple count queries.]
 
-Optimization applied to results of multiple count queries is at the root of the question here.
+At a high level, the TopDown algorithm produces differentially private counts of people in multiple
+demographic groups for hierarchically nested areal units (e.g. census tracts in countys in states).
+To do this, it repeats two steps at multiple levels of a geographic
+hierarchy (from the top down, hence the name). First,
+it adds noise from an appropriate probability distribution
+to the exact data counts to produce a set of noisy counts. Then, it adjusts
+these counts to
+be close as possible to the noisy counts, subject to the constraints
+that all counts be non-negative and consistent with each other and the higher levels
+of the hierarchy, and satisfy certain invariants and other inequalities.  These
+two steps are performed for each geographic level, from the coarsest
+to the finest.  Each level is designed to exhaust a privacy budget of $\epsilon_i$,
+so, by the sequential composition theorem, 
+the entire algorithm achieves $\epsilon$-DP for $\epsilon=\sum_{i=1}^6
+\epsilon_i$.
 
-\subsection{Simulation strategy for generating DP count data}
-I generated a synthetic population of $N$ individuals, each with a location specified by $J$ hierarchically nested levels, designed to have an average of $\mu$ individuals per location.
-I represented this database as matrix $D$ with $N$ rows and $J$ columns, where row $D_i$ represented the hierarchically nested location of individual $i$.
-To assign the location, for each individual $i$, for each level of the spatial hierarchy $j$, I sampled the location uniformly,  $D_{ij} \sim_{\mathcal{U}} \{0, 1, \ldots, C-1\}$ where $C = \left\lfloor \left(N/\mu\right)^{1/J} \right\rfloor$ is the number of children for every areal unit in the spatial hierarchy before level $J$.
+\subsection{Simulation strategy for generating synthetic individuals to count}
+To better understand how DP counting algorithms perform, I generated a synthetic population of $N$ individuals, each with a location specified by $J$ hierarchically nested levels, designed to have an average of $\mu$ individuals per location.
+I represented this database as matrix $D$ with $N$ rows and $J$ columns, where row $D_i$ represented the areal unit inhabited by individual $i$.
+To assign this areal unit, for each individual $i$, for each level of the spatial hierarchy $j$, I sampled the location uniformly at random, $D_{ij} \sim_{\mathcal{U}} \{0, 1, \ldots, C-1\}$, where $C = \left\lfloor \left(N/\mu\right)^{1/J} \right\rfloor$ is the number of children for every areal unit in the spatial hierarchy before level $J$ (e.g. the number of census tracts in each county is $C$ in my simulation).
 
 To find the exact total count (TC) for each location at any level of the spatial hierarchy, I grouped the database $D$ by spatial area and counted how many individuals were in each areal unit:
 $$
@@ -114,7 +127,8 @@ D_{i,J'} = j_{J'}
 \right].
 $$
 
-\emph{Geometric Mechanism:} To generate $\epsilon$-DP counts from exact counts, I used the geometric mechanism to add noise to the exact counts for the most fine-grained areas in the spatial hierarchy (abbreviated GDPC for geometric DP count):
+\subsection{Three DP algorithms for counting total individuals}
+\emph{Geometric Noise:} To generate $\epsilon$-DP counts from exact counts, I used the geometric mechanism to add noise to the exact counts for the most fine-grained areal units in the spatial hierarchy (abbreviated GDPC for geometric DP count):
 $$
 \mathrm{GDPC}_{j_1, j_2, \ldots, j_{J}} = \mathrm{TC}_{j_1, j_2, \ldots, j_{J}} + X_{j_1, j_2, \ldots, j_{J}},
 $$
@@ -123,14 +137,14 @@ $$\Pr[G(z)=k] = \frac{(1 - \exp(-z))\exp(-z|k|)}{1 + \exp(-z)}.$$
 The output of this algorithm is the list of $
 \mathrm{GDPC}_{j_1, j_2, \ldots, j_{J}}$ values for all tuples $(j_1, j_2, \ldots, j_{J})$.
 
-\emph{Raked Mechanism:} To capture a key element of the TopDown approach developed for the 2020 US Census, I also generated $\epsilon$-DP counts from exact counts hierarchically, by ``raking'' the noisy counts at each level to sum to the noisy count from the level above.
+\emph{Raked Geometric Noise:} To capture a key element of the TopDown algorithm, I also generated $\epsilon$-DP counts from exact counts hierarchically, by ``raking'' the noisy counts at each level to sum to the noisy count from the level above.
 
-To be precise, for level $J'$ of the spatial hierarchy, I first calculated noisy counts analogous to $\mathrm{GDPC}$ from the Geometric Mechanism, but using only a $1/(J+1)$ portion of the total privacy budget $\epsilon$:
+To be precise, for level $J'$ of the spatial hierarchy, I first calculated noisy counts analogous to $\mathrm{GDPC}$, but using only a $1/(J+1)$ portion of the total privacy budget:
 $$
 \mathrm{NoisyC}_{j_1, j_2, \ldots, j_{J'}} = \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}} + X_{j_1, j_2, \ldots, j_{J'}},
 $$
 where $X_{j_1, j_2, \ldots, j_{J'}} \sim G(\epsilon/(J+1))$.
-I then obtained the raked DP counts (RDPC) by scaling the noisy counts within each spatial area at level $J'-1$ of the spatial hierarchy, so that the sum of raked counts was equal to the raked DP count for the parent area in the spatial hierarchy:
+I then obtained the raked DP counts (RDPC) by scaling the noisy counts for the children of each areal unit at level $J'-1$ of the spatial hierarchy, so that the sum of raked counts at level $J'$ was equal to the raked DP count for their parent:
 $$
 \mathrm{RDPC}_{j_1, j_2, \ldots, j_{J'}} = 
 \mathrm{NoisyC}_{j_1, j_2, \ldots, j_{J'}}\cdot
@@ -146,36 +160,39 @@ $\mathrm{RDPC}_{\{\}} = N + X_{\{\}}$, where $X_{\{\}} \sim G(\epsilon/(J+1))$.
 The output of this algorithm is the list of $
 \mathrm{RDPC}_{j_1, j_2, \ldots, j_{J'}}$ values for all tuples $(j_1, j_2, \ldots, j_{J'})$ for all $J' \leq J$.
 
-\emph{Average-of-Multiple-Geometric Mechanism:} As a comparison, I also used a mechanism which produced an average multiple noisy measurements that is provably $\epsilon$-DP.  As with the raked mechanism, I split the total privacy budget equally into $P$ parts, but I then used each portion to run the geometric mechanism with the smaller epsilon, and obtained the Average-of-Multiple-Geometrics DP counts (ADPC) from their arithmetic mean:
+\emph{Averaged Geometric Noise:} As a comparison, I considered a algorithm which produced an average multiple noisy measurements that is provably $\epsilon$-DP.  As with the raked approach, I split the total privacy budget equally into $P$ parts, but I then used each portion to run the geometric mechanism with the smaller epsilon, and obtained the Average-of-Geometrics DP counts (ADPC) from their arithmetic mean:
 $$
 \mathrm{ADPC}_{j_1,j_2,\ldots, j_{J}} =
 \frac{1}{P}\sum_{p=1}^P
 \mathrm{GDPC}_{j_1, j_2, \ldots, j_{J}}^p,
 $$
-where $\mathrm{GDPC}_{j_1, j_2, \ldots, j_{J}}^p$ is the output of an independent replicated of the GDPC mechanism with privacy budget $\epsilon/P$.
+where $\mathrm{GDPC}_{j_1, j_2, \ldots, j_{J}}^p$ is the output of an independent replicate of the GDPC algorithm with privacy budget $\epsilon/P$.
 
 \subsection{Empirical estimation of privacy loss}
-Differentially private algorithms are often engineered to achieve a guaranteed maximum level of privacy loss (for example GDPC, RDPC, and ADPC are all $\epsilon$-DP).  However, in complex algorithms like TopDown or the raked mechanism defined above, this bound on the privacy loss might have room for improvement.  I tested two approaches to empirically measuring privacy loss, to see how the theoretical bound of $\epsilon$ from the mechanisms above compares to the privacy loss demonstrable in practice.
+Differentially private algorithms are often engineered to achieve a guaranteed maximum level of privacy loss (for example GDPC, RDPC, and ADPC are all $\epsilon$-DP).  However, in complex algorithms like TopDown or RDPC, this bound on the privacy loss might have room for improvement.  I tested two approaches to empirically measuring privacy loss, to see how the theoretical bounds of $\epsilon$ from the algorithms above compare to the privacy loss demonstrable in practice.
 
-The most direct way to empirically investigate the privacy loss of an algorithm $\mathcal{A}$ like those from the previous section is to search for databases $D$ and $D'$ that differ on a single row and an event $E$ that can serve as a witness to the gap between $\Pr[\mathcal{A}(D) \in E]$ and $\Pr[\mathcal{A}(D') \in E]$.  Estimating the ratio of these probabilities is straightforward, but computationally intensive, and searching the space of near-databases and events is also difficult to do in general.  This approach has been developed in prior work by \citet{TK}.  In the case of count queries with the $D$ defined in the previous section, the search simplifies substantially.  The symmetric nature of the database means we can focus on changing the first row, without loss of generality, and the discrete nature of the output means we can restrict our attention entirely to events $E$ of the form $\left\{\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
+The most direct way to empirically investigate the privacy loss of an algorithm $\mathcal{A}$ like those from the previous section is to search for databases $D$ and $D'$ that differ on a single row and an event $E$ that can serve as a witness to the gap between $\Pr[\mathcal{A}(D) \in E]$ and $\Pr[\mathcal{A}(D') \in E]$.  Estimating the ratio of these probabilities is straightforward, but computationally intensive, and searching the space of near-databases and events is also difficult to do in general.  This approach has been developed in prior work by Ding et al (2019).\cite{ding2018detecting}  In the case of count queries with the $D$ defined in the previous section, the search simplifies substantially.  The symmetric nature of the database means we can focus on changing the first row, without loss of generality, and the discrete nature of the output means we can restrict our attention entirely to events $E$ of the form $\left\{\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
 - \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}
 = k\right\}$.
 
-\emph{Simple estimate:} I ran GDPC and RDPC 1,000 times with a single synthetic database $D$, generated as described above, and 1,000 more times with a perturbed database $D'$, created by incrementing all of the area indices of row 1 (mod $C$). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for the areal unit identified by $D_0$ being at least $i$ for a range of values of $i$ close to the exact total count for this area.  For any $i$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios is my ``simple'' empirical estimate of the privacy loss.
+\emph{Direct estimate:} I ran GDPC, RDPC, and ADPC 100 times with a single synthetic database $D$, generated as described above, and 100 more times with a perturbed database $D'$, created by changing the areal unit of a single individual (moving someone from area $0$ to area $1001$ to be precise). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for areal unit $0$ being $k$ away from the exact total count for this area.  For any $k$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios could be used as an empirical estimate of the privacy loss.
 
-\emph{Less-obvious estimate:} Because of the special structure of count queries, there is a way to avoid re-running the DP algorithm repeatedly.  This can be particularly useful for assessing the empirical privacy loss of complex mechanisms like TopDown. If the difference between the DP count and the exact count was identically distributed for all areal units, then instead of focusing on only the areal unit containing $D_0$, we could use the residuals for all areal units to estimate the probability of the event we are after:
+With only 100 replicates of the results of the original and perturbed counts, however, these directly estimated log-ratios are too noisy to provide an interpretable bound.  To address this, I used Gaussian kernel density estimation, to estimate the probability of a residual of $k$ for the original and perturbed databases, $\tilde{p}_D(k)$ and $\tilde{p}_{D'}(k)$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log\left( \tilde{p}_D(k) / \tilde{p}_{D'}(k)\right)$ as a less-noisy direct estimate of the empirical privacy loss.
+
+\emph{Less-obvious estimate:} Because of the special structure of count queries, there is a way to avoid re-running the DP algorithm repeatedly.  This can be particularly useful for assessing the empirical privacy loss of complex algorithms like TopDown. If the difference between the DP count and the exact count was identically distributed for all areal units, then instead of focusing on only the areal units containing the individual who's changed, we could use the residuals for all areal units to estimate the probability of the event we are after:
 $$\Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^D
 = k\right]
 \approx
 \bigg(\sum_{j_1'=1}^C\sum_{j_2'=1}^C\cdots\sum_{j_J' = 1}^C \mathbf{1}\left[\left\{\mathrm{error}_{j_1', j_2', \ldots, j_{J}'}^D
-= k\right\}\right]\bigg)\bigg/C^J =: \hat{p}_k.
+= k\right\}\right]\bigg)\bigg/C^J =: \hat{p}_k,
 $$
-I wrote $\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^D$ as shorthand for the residual $\left(\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
-- \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}\right)$, where $\mathcal{A}(D)$ is the vector of DP counts returned by the GDPC or RDPC algorithm.
+and $$\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^D = \left(\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
+- \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}\right),$$
+where $\mathcal{A}(D)$ is the vector of DP counts returned by the GDPC, RDPC, or ADPC algorithm.
 
-We can make this estimate with more precision than the simple estimate, using substantially less computation.
+We can make this estimate with more precision than the direct estimate, using substantially less computation.
 
-It is also possible to make an estimate of the probability $D'$ yields error which exceeds $k$ without repeatedly running the DP algorithm.  This relies on the observation that, for count queries, a change to a single row of data can change the exact count by at most one for any areal unit.  Therefore
+It is also possible to make an estimate of the probability $D'$ yields error of $k$ without repeatedly running the DP algorithm.  This relies on the observation that, for count queries, a change to a single row of data can change the exact count by at most one for any areal unit.  Therefore
 $$
 \Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^{D'}
 = k\right]
@@ -184,7 +201,7 @@ $$
 \Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^{D}
 = k+1\right], \qquad \text{ if } k \geq 0;\\[.1in]
 \Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^{D}
-= k-1\right], \qquad \text{ if } k \leq 0.
+= k-1\right], \qquad \text{ if } k \leq 0;
 \end{cases}
 $$
 which we can also approximate by examining the residuals for all areal units:
@@ -194,25 +211,28 @@ $$\Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^{D'}
 \bigg(\sum_{j_1'=1}^C\sum_{j_2'=1}^C\cdots\sum_{j_J' = 1}^C \mathbf{1}\left[\left\{\mathrm{error}_{j_1', j_2', \ldots, j_{J}'}^D
 = k\pm 1\right\}\right]\bigg)\bigg/C^J.
 $$
-With these approximations in hand, I ran GDPC and RDPC for a range of databases $D$, with multiple values of $N$, $J$, and $\mu$, and calculated $\log \hat{p}_k / \hat{p}_{k-1}$ for all $|k| \leq K$ (the maximum of which provides an empirical lower bound on the privacy loss $\epsilon$).  I also searched for the appropriate value of $K$ to bound the range of residuals, which I parameterized by selecting a residual percentile and scaling factor (e.g. take $K$ to be $1.5$ times the $95$-th percentile of the residuals).
+With these estimate in mind, I ran GDPC and RDPC for a range of databases $D$, with multiple values of $N$, $J$, $\mu$, and $\epsilon$ and calculated $\log \hat{p}_k / \hat{p}_{k-1}$ for all $|k| \leq K$. I used the maximum log-ratio as an empirical comparator with the theoretical privacy loss $\epsilon$.  I also searched for the appropriate value of $K$ to bound the range of residuals, which I parameterized by selecting a residual percentile and scaling factor (e.g. take $K$ to be $1.5$ times the $95$-th percentile of the residuals).
 
-I found that the stochastic noise in $\hat{p}_k$ led to undesirable fluctuations in the empirical privacy loss bounds, and to address this, I added a Gaussian kernel smoothing step, to produce a function $f(k)$ from the noisy approximations of $\hat{p}_k$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log f(k) / f(k+1)$ to create a less noisy estimate of the empirical privacy loss.
+As with the direct estimates, I found that the stochastic noise in $\hat{p}_k$ led to undesirable fluctuations in the empirical privacy loss bounds, and to address this, I used Gausian kernel density estimates to smooth the approximations of $\hat{p}(k)$ as a function of $k$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log \hat{p}(k) / \hat{p}(k+1)$ to create a less noisy estimate of the empirical privacy loss.
 
 \section{Results}
 \label{results}
 
-[Distribution of errors and privacy loss for GDPC and RDPC using both methods.]
+My direct estimate of privacy loss took 20 minutes of compute time to produce 100 samples, but was too noisy to be interpretable. KDE smoothing was also unsuccessful in reducing the noise (in the time available in my rush to the submission deadline).  By uses a comparison of $\left\{\mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
+- \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}
+\geq k\right\}$ (instead of equal to $k$), I did obtain results visually consistent with the proven DP bound of $\epsilon$.
+
 
 [plot with epsilon on x-axis, and epl on y-axis, for a range of values of
 (1) epsilon; (2) ]
-Use natbib command \citet{hasselmo} to get citations, such as  Hasselmo, et al.\ (1995)
+%% Use natbib command \citet{hasselmo} to get citations, such as  Hasselmo, et al.\ (1995)
 
 
-\begin{figure}
-  \centering
-   \includegraphics[width=0.8\linewidth]{myfile.pdf}
-  \caption{Sample figure caption.}
-\end{figure}
+%%\begin{figure}
+%%  \centering
+%%   \includegraphics[width=0.8\linewidth]{myfile.pdf}
+%%  \caption{Sample figure caption.}
+%%\end{figure}
 
 \section{Discussion}
 
@@ -222,19 +242,7 @@ Could have missed something.
 \section{Conclusion}
 
 
-\section*{References}
-
-[1] Alexander, J.A.\ \& Mozer, M.C.\ (1995) Template-based algorithms for
-connectionist rule extraction. In G.\ Tesauro, D.S.\ Touretzky and T.K.\ Leen
-(eds.), {\it Advances in Neural Information Processing Systems 7},
-pp.\ 609--616. Cambridge, MA: MIT Press.
-
-[2] Bower, J.M.\ \& Beeman, D.\ (1995) {\it The Book of GENESIS: Exploring
-  Realistic Neural Models with the GEneral NEural SImulation System.}  New York:
-TELOS/Springer--Verlag.
-
-[3] Hasselmo, M.E., Schnell, E.\ \& Barkai, E.\ (1995) Dynamics of learning and
-recall at excitatory recurrent synapses and cholinergic modulation in rat
-hippocampal region CA3. {\it Journal of Neuroscience} {\bf 15}(7):5249-5262.
+\bibliographystyle{plain} % We choose the "plain" reference style
+\bibliography{references} % Entries are in the "refs.bib" file
 
 \end{document}
