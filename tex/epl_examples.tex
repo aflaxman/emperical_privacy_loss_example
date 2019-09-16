@@ -78,7 +78,7 @@
 
 \section{Introduction}
 
-The 2020 US Census will use a new approach to disclosure avoidance to protect respondentsâ€™ data.\cite{abowd2018disclosure} This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.\cite{dwork2014algorithmic}
+The 2020 US Census will use a new approach to disclosure avoidance to protect respondents'€™ data.\cite{abowd2018disclosure} This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.\cite{dwork2014algorithmic}
 
 The Census Bureau has developed their algorithm, TopDown, to be $\epsilon$-DP with low error, by applying a geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, and using constrained optimization to combine the noisy measurements and ensure consistency at each level.\cite{abowd2019census}  Although the sequential composition theorem of DP ensures that the total privacy loss of TopDown is at most $\epsilon$, it is possible that this inequality is not tight.
 
@@ -97,7 +97,7 @@ $$
 $$
 
 At a high level, the TopDown algorithm produces differentially private counts of people in multiple
-demographic groups for hierarchically nested areal units (e.g. census tracts in countys in states).
+demographic groups for hierarchically nested areal units (e.g. census tracts in counties in states).
 To do this, it repeats two steps at multiple levels of a geographic
 hierarchy (from the top down, hence the name). First,
 it adds noise from an appropriate probability distribution
@@ -213,7 +213,7 @@ $$\Pr\left[\mathrm{error}_{j_1, j_2, \ldots, j_{J}}^{D'}
 $$
 With these estimate in mind, I ran GDPC and RDPC for a range of databases $D$, with multiple values of $N$, $J$, $\mu$, and $\epsilon$ and calculated $\log \hat{p}_k / \hat{p}_{k-1}$ for all $|k| \leq K$. I used the maximum log-ratio as an empirical comparator with the theoretical privacy loss $\epsilon$.  I also searched for the appropriate value of $K$ to bound the range of residuals, which I parameterized by selecting a residual percentile and scaling factor (e.g. take $K$ to be $1.5$ times the $95$-th percentile of the residuals).
 
-As with the direct estimates, I found that the stochastic noise in $\hat{p}_k$ led to undesirable fluctuations in the empirical privacy loss bounds, and to address this, I used Gausian kernel density estimates to smooth the approximations of $\hat{p}(k)$ as a function of $k$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log \hat{p}(k) / \hat{p}(k+1)$ to create a less noisy estimate of the empirical privacy loss.
+As with the direct estimates, I found that the stochastic noise in $\hat{p}_k$ led to undesirable fluctuations in the empirical privacy loss bounds, and to address this, I used Gaussian kernel density estimates to smooth the approximations of $\hat{p}(k)$ as a function of $k$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log \hat{p}(k) / \hat{p}(k+1)$ to create a less noisy estimate of the empirical privacy loss.
 
 \section{Results}
 \label{results}
