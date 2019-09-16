@@ -78,7 +78,7 @@
 
 \section{Introduction}
 
-The 2020 US Census will use a new approach to disclosure avoidance to protect respondents'€™ data.\cite{abowd2018disclosure} This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.\cite{dwork2014algorithmic}
+The 2020 US Census will use a new approach to disclosure avoidance to protect respondents' data.\cite{abowd2018disclosure} This approach relies on $\epsilon$-Differential Privacy (DP), a mathematical definition of privacy that has been developed over the last decade and a half in the theoretical computer science and cryptography communities. $\epsilon$-DP is not an algorithm, it is a property that an algorithm might satisfy.\cite{dwork2014algorithmic}
 
 The Census Bureau has developed their algorithm, TopDown, to be $\epsilon$-DP with low error, by applying a geometric mechanism repeatedly, at multiple levels of a geographic hierarchy, and using constrained optimization to combine the noisy measurements and ensure consistency at each level.\cite{abowd2019census}  Although the sequential composition theorem of DP ensures that the total privacy loss of TopDown is at most $\epsilon$, it is possible that this inequality is not tight.
 
