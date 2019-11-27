@@ -173,9 +173,9 @@ Differentially private algorithms are often engineered to achieve a guaranteed m
 
 The most direct way to empirically investigate the privacy loss of an algorithm $\mathcal{A}$ like those from the previous section is to search for databases $D$ and $D'$ that differ on a single row and an event $E$ that can serve as a witness to the gap between $\Pr[\mathcal{A}(D) \in E]$ and $\Pr[\mathcal{A}(D') \in E]$.  Estimating the ratio of these probabilities is straightforward, but computationally intensive, and searching the space of near-databases and events is also difficult to do in general.  This approach has been developed in prior work by Ding et al (2019).\cite{ding2018detecting}  In the case of count queries with the $D$ defined in the previous section, the search simplifies substantially.  The symmetric nature of the database means we can focus on changing the first row, without loss of generality, and the discrete nature of the output means we can restrict our attention entirely to events $E$ of the form $\left\{\mathrm{error}_{j_1, j_2, \ldots, j_{J}}
 = k\right\}$ or $\left\{\mathrm{error}_{j_1, j_2, \ldots, j_{J}} \geq k\right\}$ where $\mathrm{error}_{j_1, j_2, \ldots, j_{J}} = \mathcal{A}(D)_{j_1, j_2, \ldots, j_{J'}}
-- \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}$.
+- \mathrm{TC}_{j_1, j_2, \ldots, j_{J'}}$, where $k$ is any integer.
 
-\emph{Direct estimate:} I ran GDPC, RDPC, and ADPC 500 times with a single synthetic database $D$, generated as described above, and 500 more times with a perturbed database $D'$, created by changing the areal unit of a single individual (moving someone from area $0$ to area $1001$ to be precise). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for areal unit $0$ being $k$ away from the exact total count for this area.  For any $k$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios could be used as an empirical estimate of the privacy loss.
+\emph{Direct estimate:} I ran GDPC, RDPC, and ADPC 500 times with a single synthetic database $D$, generated as described above, and 500 more times with a perturbed database $D'$, created by changing the areal unit of a single individual (moving someone from area $0$ to area $1001$, where these areas were chosen arbitrarily). From these repeated realizations of the randomized algorithm, I estimated the probability of the count for areal unit $0$ being $k$ away from the exact total count for this area.  For any $k$, the log of the ratio of these probabilities constitutes a (noisy) lower bound on $\epsilon$, and the maximum over these log-ratios could be used as an empirical estimate of the privacy loss.
 
 % With only 100 replicates of the results of the original and perturbed counts, however, these directly estimated log-ratios are too noisy to provide an interpretable bound.  To address this, I used Gaussian kernel density estimation, to estimate the probability of a residual of $k$ for the original and perturbed databases, $\tilde{p}_D(k)$ and $\tilde{p}_{D'}(k)$.  I experimented with a range of bandwidth parameters for the Gaussian, and used $\log\left( \tilde{p}_D(k) / \tilde{p}_{D'}(k)\right)$ as a less-noisy direct estimate of the empirical privacy loss.
 
@@ -231,7 +231,7 @@ My less-obvious estimate of privacy loss took 20 seconds of compute time even th
  \caption{Panel (a) shows the distribution of residuals (DP - Exact) for
 GDPC, RDPC, and ADPC, each with an $\epsilon$ selected to have empirical privacy loss of $0.025$; and panel (b) shows the ``less-obvious'' estimate of empirical privacy
 loss, smoothing with a kernel of bandwidth
-$0.15$.}
+$0.15$. This shows that for GDPC, the empirical privacy loss is equal to the budget of $0.025$, which for ADPC is it half of the budget of $0.05$ and for RDPC is is one quarter of the budget of $0.1$.}
 \end{figure}
 
 \section{Discussion and Conclusion}
@@ -240,7 +240,7 @@ This work is preliminary and certainly not without limitations.  My biggest conc
 
 
 \bibliographystyle{plain} % We choose the "plain" reference style
-\bibliography{references} % Entries are in the "refs.bib" file
+\bibliography{references} % Entries are in the "references.bib" file
 
 Source code to reproduce the methods and results described in this paper can be found at \url{https://github.com/aflaxman/eqpl_w_examples}.
 
